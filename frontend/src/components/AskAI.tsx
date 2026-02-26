@@ -48,16 +48,6 @@ export default function AskAI({ productId, productData }: AskAIProps) {
         handleAsk(question);
     };
 
-    // Format answer text with proper line breaks
-    const formatAnswer = (text: string) => {
-        return text.split('\n').map((line, i) => (
-            <span key={i}>
-                {line}
-                {i < text.split('\n').length - 1 && <br />}
-            </span>
-        ));
-    };
-
     return (
         <div className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6 mb-6">
             <div className="flex items-center gap-3 mb-6">

@@ -1,4 +1,4 @@
-import type { Product, PriceComparison, AIAnalysis, AnalysisResult } from '../types';
+import type { PriceComparison, AnalysisResult } from '../types';
 
 const API_BASE = 'http://localhost:3005';
 
@@ -162,7 +162,7 @@ export const api = {
      * Ask AI a question about a product
      */
     async askAI(
-        productId: string,
+        _productId: string,
         question: string,
         productData?: {
             title: string;
