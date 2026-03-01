@@ -46,8 +46,8 @@ def upscale_amazon_image_url(url: str) -> str:
     """Replace Amazon image size suffixes (e.g. ._SL75_, ._SX38_) with high-res ._SL1500_."""
     if not url:
         return url
-    # Match patterns like ._SL75_. or ._SX38_SY50_ or ._AC_SX38_ etc.
-    upgraded = re.sub(r'\._[A-Z]{2}[\dA-Z_,]+_\.', '._SL1500_.', url)
+    # Match patterns like ._SL75_. or ._SX38_SY50_ or ._AC_SX38_ or ._AC_UL320_ or ._SS40_ etc.
+    upgraded = re.sub(r'\._(?:[A-Z]{2,3}_)*[A-Z]{2}[\dA-Z_,]+_\.', '._SL1500_.', url)
     return upgraded
 
 
@@ -55,7 +55,13 @@ def upscale_flipkart_image_url(url: str) -> str:
     """Replace Flipkart thumbnail sizes with high-res /832/."""
     if not url:
         return url
-    return url.replace('/128/', '/832/').replace('/416/', '/832/').replace('/200/', '/832/')
+    return (url
+        .replace('/64/', '/832/')
+        .replace('/100/', '/832/')
+        .replace('/128/', '/832/')
+        .replace('/200/', '/832/')
+        .replace('/416/', '/832/')
+    )
 
 
 # ── HTTP Fetch ──────────────────────────────────────────────────
