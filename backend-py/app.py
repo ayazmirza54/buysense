@@ -56,7 +56,7 @@ app = FastAPI(title="BuySense Backend", version="1.0.0")
 # CORS — allow the Vite frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://main.d2906mzyvvwogq.amplifyapp.com/", "https://buysense.onrender.com/"],
+    allow_origins=["https://main.d2906mzyvvwogq.amplifyapp.com", "https://buysense.onrender.com"],
     allow_methods=["GET", "POST"],
     allow_credentials=True,
     allow_headers=["*"],
