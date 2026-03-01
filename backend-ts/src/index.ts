@@ -25,7 +25,7 @@ const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:3005'],
+    origin: ['http://https://main.d2906mzyvvwogq.amplifyapp.com/', 'http://https://buysense.onrender.com'],
     methods: ['GET', 'POST'],
     credentials: true
 }));

@@ -1,6 +1,6 @@
 import type { PriceComparison, AnalysisResult } from '../types';
 
-const API_BASE = 'http://localhost:3005';
+const API_BASE = 'http://https://buysense.onrender.com';
 
 // Transform backend response to frontend types
 interface BackendResponse {
