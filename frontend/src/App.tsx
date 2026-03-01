@@ -145,17 +145,7 @@ function App() {
                 </div>
               )}
 
-              {/* Alternative Method */}
-              <div className="text-center">
-                <p className="text-gray-500 mb-2">OR</p>
-                <p className="text-gray-400">
-                  Add{' '}
-                  <span className="font-mono bg-white/10 px-2 py-1 rounded text-blue-400 border border-white/10">
-                    buysense.co/
-                  </span>{' '}
-                  in front of a product URL to get instant analysis
-                </p>
-              </div>
+            
 
               {/* Supported Platforms */}
               <SupportedPlatforms />
