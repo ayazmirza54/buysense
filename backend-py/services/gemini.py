@@ -159,7 +159,7 @@ One-line justification for the score."""
 
     try:
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-flash-lite-latest",
             contents=prompt,
             config={
                 "tools": [{"google_search": {}}],
@@ -308,7 +308,7 @@ If you're not sure about something, say so honestly. Do NOT make up information.
 
     try:
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-flash-lite-latest",
             contents=prompt,
             config={
                 "tools": [{"google_search": {}}],

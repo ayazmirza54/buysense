@@ -140,7 +140,7 @@ One-line justification for the score.`;
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-flash-lite-latest",
             contents: prompt,
             config: {
                 tools: [{ googleSearch: {} }],
@@ -288,7 +288,7 @@ If you're not sure about something, say so honestly. Do NOT make up information.
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-flash-lite-latest",
             contents: prompt,
             config: {
                 tools: [{ googleSearch: {} }],
