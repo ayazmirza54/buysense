@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import os
+import sys
 import time
 from datetime import datetime, timezone
 
@@ -49,6 +50,11 @@ from services.scraper import scrape_product, upscale_amazon_image_url, upscale_f
 
 load_dotenv()
 
+# Log lines contain emoji / ₹ — avoid UnicodeEncodeError on non-UTF-8 consoles (e.g. Windows cp1252)
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 # ── FastAPI app ─────────────────────────────────────────────────
 
 app = FastAPI(title="BuySense Backend", version="1.0.0")
@@ -56,7 +62,12 @@ app = FastAPI(title="BuySense Backend", version="1.0.0")
 # CORS — allow the Vite frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://main.d2906mzyvvwogq.amplifyapp.com", "https://buysense.onrender.com"],
+    allow_origins=[
+        "https://main.d2906mzyvvwogq.amplifyapp.com",
+        "https://buysense.onrender.com",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_methods=["GET", "POST"],
     allow_credentials=True,
     allow_headers=["*"],
@@ -68,7 +79,20 @@ _product_cache: dict[str, dict] = {}
 CACHE_TTL = 30 * 60  # 30 minutes in seconds
 
 
-# ── Global error handler ───────────────────────────────────────
+# ── Error handlers ─────────────────────────────────────────────
+# The frontend reads `message` from error bodies, so every error uses that key.
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_request: Request, exc: HTTPException):
+    return JSONResponse(status_code=exc.status_code, content={"message": exc.detail})
+
+
+@app.exception_handler(RuntimeError)
+async def runtime_error_handler(_request: Request, exc: RuntimeError):
+    # Raised by the Gemini service with a user-facing message
+    print(f"Service error: {exc} (cause: {exc.__cause__})")
+    return JSONResponse(status_code=502, content={"message": str(exc)})
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(_request: Request, exc: Exception):

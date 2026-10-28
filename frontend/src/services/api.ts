@@ -1,6 +1,9 @@
 import type { PriceComparison, AnalysisResult } from '../types';
 
-const API_BASE = 'https://buysense.onrender.com';
+// Override with VITE_API_URL; otherwise use the local backend in dev and Render in production
+const API_BASE: string =
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.DEV ? 'http://localhost:3005' : 'https://buysense.onrender.com');
 
 // Transform backend response to frontend types
 interface BackendResponse {

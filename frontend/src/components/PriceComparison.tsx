@@ -5,7 +5,11 @@ interface PriceComparisonProps {
 }
 
 export default function PriceComparison({ data }: PriceComparisonProps) {
-    const sortedStores = [...data.stores].sort((a, b) => a.price - b.price);
+    // Real prices ascending; price-less search links ("Check Price") go last
+    const sortedStores = [...data.stores].sort((a, b) => {
+        if (a.price > 0 !== b.price > 0) return a.price > 0 ? -1 : 1;
+        return a.price - b.price;
+    });
 
     return (
         <div className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6 h-full">
@@ -27,7 +31,7 @@ export default function PriceComparison({ data }: PriceComparisonProps) {
             <div className="space-y-3">
                 {sortedStores.map((store, i) => (
                     <a
-                        key={store.name}
+                        key={`${store.name}-${i}`}
                         href={store.url}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -44,7 +48,7 @@ export default function PriceComparison({ data }: PriceComparisonProps) {
 
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold ${i === 0 ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold ${store.isBestPrice ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'
                                     }`}>
                                     {i + 1}
                                 </div>

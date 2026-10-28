@@ -54,6 +54,76 @@ class GeminiAnalysisResult:
     timestamp: str = ""
 
 
+# ── Parsing helpers ─────────────────────────────────────────────
+
+def _num(value, default: float = 0) -> float:
+    """Coerce Gemini JSON values like 24900, "24,900" or "₹24,900" to a float."""
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        match = re.search(r"\d+(?:\.\d+)?", value.replace(",", ""))
+        if match:
+            return float(match.group())
+    return default
+
+
+def _dict(value) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
+def _parse_product(p: dict) -> GeminiProductData:
+    price = _dict(p.get("price"))
+    ratings = _dict(p.get("ratings"))
+    specs = _dict(p.get("specifications"))
+    product = GeminiProductData(
+        title=str(p.get("title") or "Product"),
+        brand=str(p.get("brand") or ""),
+        price_current=_num(price.get("current")),
+        price_original=_num(price.get("original")) or None,
+        price_currency=str(price.get("currency") or "INR"),
+        images=[
+            img for img in (p.get("images") or [])
+            if isinstance(img, str) and img.startswith("http")
+        ],
+        specifications={str(k): str(v) for k, v in specs.items() if v is not None},
+        rating_average=_num(ratings.get("average")),
+        rating_count=int(_num(ratings.get("count"))),
+        highlights=[str(h) for h in (p.get("highlights") or []) if h],
+    )
+    # Clean up original price
+    if product.price_original and product.price_original <= product.price_current:
+        product.price_original = None
+    return product
+
+
+def _parse_prices(raw) -> list[GeminiPriceEntry]:
+    if not isinstance(raw, list):
+        return []
+    return [
+        GeminiPriceEntry(
+            store=str(pe.get("store") or "Unknown"),
+            price=_num(pe.get("price")),
+            currency=str(pe.get("currency") or "INR"),
+            url=str(pe.get("url") or ""),
+            availability=pe.get("availability") if pe.get("availability") in ("in-stock", "out-of-stock", "limited") else "in-stock",
+        )
+        for pe in raw
+        if isinstance(pe, dict) and _num(pe.get("price")) > 0
+    ]
+
+
+def _friendly_error(e: Exception, fallback: str) -> str:
+    """Turn common Gemini API failures into an actionable message."""
+    text = str(e)
+    if "API_KEY_INVALID" in text or "API key not valid" in text or "GEMINI_API_KEY" in text:
+        return "AI service is misconfigured: the Gemini API key is missing or invalid."
+    if "RESOURCE_EXHAUSTED" in text or "429" in text:
+        return "AI service is busy (rate limit reached). Please try again in a minute."
+    return fallback
+
+
 # ── Client ──────────────────────────────────────────────────────
 
 def _get_client() -> genai.Client:
@@ -158,7 +228,7 @@ One-line justification for the score."""
     from datetime import datetime, timezone
 
     try:
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-flash-lite-latest",
             contents=prompt,
             config={
@@ -175,65 +245,25 @@ One-line justification for the score."""
 
         json_match = re.search(r"```json\s*([\s\S]*?)\s*```", full_content)
         if json_match:
+            raw = json_match.group(1).strip()
+            parsed = None
             try:
-                parsed = json.loads(json_match.group(1).strip())
-
-                if "product" in parsed:
-                    p = parsed["product"]
-                    product = GeminiProductData(
-                        title=p.get("title", "Product"),
-                        brand=p.get("brand", ""),
-                        price_current=p.get("price", {}).get("current", 0),
-                        price_original=p.get("price", {}).get("original") or None,
-                        price_currency=p.get("price", {}).get("currency", "INR"),
-                        images=[
-                            img for img in (p.get("images") or [])
-                            if isinstance(img, str) and img.startswith("http")
-                        ],
-                        specifications=p.get("specifications") or {},
-                        rating_average=p.get("ratings", {}).get("average", 0),
-                        rating_count=p.get("ratings", {}).get("count", 0),
-                        highlights=p.get("highlights") or [],
-                    )
-                    # Clean up original price
-                    if product.price_original and (
-                        product.price_original <= 0 or product.price_original <= product.price_current
-                    ):
-                        product.price_original = None
-
-                if isinstance(parsed.get("prices"), list):
-                    prices = [
-                        GeminiPriceEntry(
-                            store=pe.get("store", "Unknown"),
-                            price=pe.get("price", 0),
-                            currency=pe.get("currency", "INR"),
-                            url=pe.get("url", ""),
-                            availability=pe.get("availability", "in-stock"),
-                        )
-                        for pe in parsed["prices"]
-                        if pe.get("price", 0) > 0
-                    ]
-
-                # Remove JSON block from analysis content
-                analysis_content = re.sub(r"```json\s*[\s\S]*?\s*```", "", full_content).strip()
-
+                parsed = json.loads(raw)
             except json.JSONDecodeError as e:
                 print(f"Failed to parse JSON from Gemini response: {e}")
                 # Try lenient parsing (remove trailing commas)
                 try:
-                    raw = json_match.group(1).strip()
-                    cleaned = re.sub(r",\s*([}\]])", r"\1", raw)
-                    parsed = json.loads(cleaned)
-                    if "product" in parsed:
-                        p = parsed["product"]
-                        product = GeminiProductData(
-                            title=p.get("title", "Product"),
-                            brand=p.get("brand", ""),
-                            price_current=p.get("price", {}).get("current", 0),
-                            price_currency=p.get("price", {}).get("currency", "INR"),
-                        )
+                    parsed = json.loads(re.sub(r",\s*([}\]])", r"\1", raw))
                 except json.JSONDecodeError:
                     print("Lenient JSON parsing also failed")
+
+            if isinstance(parsed, dict):
+                if isinstance(parsed.get("product"), dict):
+                    product = _parse_product(parsed["product"])
+                prices = _parse_prices(parsed.get("prices"))
+
+            # Remove JSON block from analysis content
+            analysis_content = re.sub(r"```json\s*[\s\S]*?\s*```", "", full_content).strip()
 
         # Extract sources from grounding metadata
         sources: list[GeminiSource] = []
@@ -268,7 +298,7 @@ One-line justification for the score."""
 
     except Exception as e:
         print(f"Error in analyze_product: {e}")
-        raise RuntimeError("Failed to analyze product. Please try again later.") from e
+        raise RuntimeError(_friendly_error(e, "Failed to analyze product. Please try again later.")) from e
 
 
 # ── Ask Question ────────────────────────────────────────────────
@@ -307,7 +337,7 @@ Provide a helpful, accurate, and concise answer based on the product details and
 If you're not sure about something, say so honestly. Do NOT make up information."""
 
     try:
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-flash-lite-latest",
             contents=prompt,
             config={
@@ -320,7 +350,7 @@ If you're not sure about something, say so honestly. Do NOT make up information.
 
     except Exception as e:
         print(f"Error in ask_question: {e}")
-        raise RuntimeError("Failed to get AI response. Please try again later.") from e
+        raise RuntimeError(_friendly_error(e, "Failed to get AI response. Please try again later.")) from e
 
 
 # ── Marketplace URL Generator ──────────────────────────────────

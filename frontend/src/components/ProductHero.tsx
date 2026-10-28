@@ -7,6 +7,14 @@ interface ProductHeroProps {
 
 export default function ProductHero({ product }: ProductHeroProps) {
     const [currentImage, setCurrentImage] = useState(0);
+    const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+    // AI-sourced image URLs are frequently dead; hide the ones that fail to load
+    const images = product.images.filter(img => !failedImages.has(img));
+    const markFailed = (img: string) => {
+        setFailedImages(prev => new Set(prev).add(img));
+        setCurrentImage(0);
+    };
 
     const discount = product.price.original
         ? Math.round(((product.price.original - product.price.current) / product.price.original) * 100)
@@ -18,22 +26,30 @@ export default function ProductHero({ product }: ProductHeroProps) {
                 {/* Image Carousel */}
                 <div className="space-y-4">
                     <div className="aspect-square bg-white/10 rounded-xl overflow-hidden flex items-center justify-center">
-                        <img
-                            src={product.images[currentImage]}
-                            alt={product.title}
-                            className="max-w-full max-h-full object-contain"
-                        />
+                        {images[currentImage] ? (
+                            <img
+                                src={images[currentImage]}
+                                alt={product.title}
+                                referrerPolicy="no-referrer"
+                                onError={() => markFailed(images[currentImage])}
+                                className="max-w-full max-h-full object-contain"
+                            />
+                        ) : (
+                            <svg className="w-20 h-20 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        )}
                     </div>
-                    {product.images.length > 1 && (
+                    {images.length > 1 && (
                         <div className="flex gap-2 justify-center">
-                            {product.images.map((img, i) => (
+                            {images.map((img, i) => (
                                 <button
-                                    key={i}
+                                    key={img}
                                     onClick={() => setCurrentImage(i)}
                                     className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all bg-white/5 flex items-center justify-center ${i === currentImage ? 'border-blue-500' : 'border-white/20 opacity-60 hover:opacity-100'
                                         }`}
                                 >
-                                    <img src={img} alt="" className="max-w-full max-h-full object-contain" />
+                                    <img src={img} alt="" referrerPolicy="no-referrer" onError={() => markFailed(img)} className="max-w-full max-h-full object-contain" />
                                 </button>
                             ))}
                         </div>
