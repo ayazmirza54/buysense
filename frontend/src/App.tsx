@@ -28,7 +28,7 @@ function App() {
       const result = await api.analyzeProduct(url)
       setAnalysisResult(result)
     } catch (err) {
-      setError('Failed to analyze product. Please try again.')
+      setError(err instanceof Error && err.message ? err.message : 'Failed to analyze product. Please try again.')
       console.error(err)
     } finally {
       setIsLoading(false)

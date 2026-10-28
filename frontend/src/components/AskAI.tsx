@@ -37,7 +37,10 @@ export default function AskAI({ productId, productData }: AskAIProps) {
             setAnswer(response.answer);
             setConfidence(response.confidence);
         } catch (error) {
-            setAnswer('Sorry, I couldn\'t process your question. Please try again.');
+            setConfidence(null);
+            setAnswer(error instanceof Error && error.message
+                ? `Sorry, I couldn't process your question: ${error.message}`
+                : 'Sorry, I couldn\'t process your question. Please try again.');
         } finally {
             setIsLoading(false);
         }
