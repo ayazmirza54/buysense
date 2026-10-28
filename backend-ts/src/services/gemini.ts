@@ -140,7 +140,7 @@ One-line justification for the score.`;
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-flash-lite-latest",
+            model: "gemini-3.1-flash-lite",
             contents: prompt,
             config: {
                 tools: [{ googleSearch: {} }],
